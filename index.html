@@ -106,6 +106,220 @@ body {
     </menu>
   
   </div>
+			<div class=Emu>
+				 <style>
+    :root{
+      --size:64px;
+      --gap:18px;
+      --bg:#0f172a;
+      --accent:#06b6d4;
+      --muted:rgba(255,255,255,0.9);
+      --duration:360ms;
+    }
+    /* center of circle sits exactly on top-left corner */
+    .menu-root{
+      position:fixed;
+      margin-left: 5px;
+      margin-top: 5px;
+      left:0;
+      top:0;
+      z-index:1000;
+      pointer-events:none;
+    }
+
+    /* scaling wrapper for circular expansion */
+    .menu-scale{
+      width:var(--size);
+      height:var(--size);
+      border-radius:50%;
+      background:rgba(255,255,255,0.05);
+      backdrop-filter:blur(6px);
+      position:relative;
+      transform:scale(1);
+      transform-origin:center;
+      transition:transform var(--duration) cubic-bezier(.2,.9,.2,1);
+      pointer-events:none;
+    }
+
+    .menu.open + .menu-scale{
+      transform:scale(3.2); /* looks like expanding circle */
+    }
+
+    .menu{
+      position:absolute;
+      inset:0;
+      pointer-events:auto;
+    }
+
+    .circle-btn{
+      width:var(--size);
+      height:var(--size);
+      border-radius:50%;
+      border:none;
+      cursor:pointer;
+      position:absolute;
+      left:0;top:0;
+      display:grid;place-items:center;
+      background:#0ea5a4;color:white;font-weight:bold;
+      transition:opacity var(--duration), transform var(--duration);
+    }
+
+    .child{
+      width:48px;height:48px;border-radius:50%;background:#ffffff20;border:1px solid #ffffff30;
+      opacity:0;transform:translate(0,0) scale(.5);
+      pointer-events:none;
+    }
+
+    .menu.open .child{
+      opacity:1;
+      pointer-events:auto;
+      transform:scale(1);
+    }
+
+    /* side‑by‑side around the main button */
+    .menu.open .c1{ transform:translate(calc(var(--size) + var(--gap)), 0) scale(1); }
+    .menu.open .c2{ transform:translate(calc(var(--size) + var(--gap) * 0.02), calc(var(--size) + var(--gap) * 0.02)) scale(1); }
+    .menu.open .c3{ transform:translate(0, calc(var(--size) + var(--gap))) scale(1); }
+
+    .popup{position:fixed;display:none;background:white;color:#222;padding:12px;border-radius:8px;}
+  </style>
+			  <div class="menu-root" aria-hidden="false">
+    <div class="menu" id="menu">
+      <button id="mainBtn" class="circle-btn main" aria-expanded="false" aria-controls="menu">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+          <path d="M3 12h18M12 3v18" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path>
+        </svg>
+      </button>
+
+      <button class="circle-btn child c1" id="btn1" aria-haspopup="dialog" aria-controls="popup1" title="Open option 1">A</button>
+      <button class="circle-btn child c2" id="btn2" aria-haspopup="dialog" aria-controls="popup2" title="Open option 2">B</button>
+      <button class="circle-btn child c3" id="btn3" aria-haspopup="dialog" aria-controls="popup3" title="Open option 3">C</button>
+    </div>
+  </div>
+
+
+
+  <!-- Popups (hidden until opened) -->
+  <div class="popup" id="popup1" role="dialog" aria-modal="true" aria-hidden="true">
+    <button class="close" data-close>&times;</button>
+    <h3>Action A</h3>
+    <p>This is popup content for action A.</p>
+  </div>
+
+  <div class="popup" id="popup2" role="dialog" aria-modal="true" aria-hidden="true">
+    <button class="close" data-close>&times;</button>
+    <h3>Action B</h3>
+    <p>This is popup content for action B.</p>
+  </div>
+
+  <div class="popup" id="popup3" role="dialog" aria-modal="true" aria-hidden="true">
+    <button class="close" data-close>&times;</button>
+    <h3>Action C</h3>
+    <p>This is popup content for action C.</p>
+  </div>
+
+  <script>
+    // Grab elements
+    const menu = document.getElementById('menu');
+    const mainBtn = document.getElementById('mainBtn');
+    const children = Array.from(menu.querySelectorAll('.child'));
+
+    // Toggle menu open/close
+    function toggleMenu(open){
+      const willOpen = (typeof open === 'boolean') ? open : !menu.classList.contains('open');
+      menu.classList.toggle('open', willOpen);
+      mainBtn.setAttribute('aria-expanded', String(willOpen));
+      // animate main icon rotation for feedback
+      mainBtn.style.transform = willOpen ? 'rotate(45deg) scale(1.02)' : '';
+    }
+
+    mainBtn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      toggleMenu();
+    });
+
+    // close menu when clicking away
+    document.addEventListener('click', (e)=>{
+      if(!menu.contains(e.target)) toggleMenu(false);
+    });
+
+    // keyboard accessibility
+    mainBtn.addEventListener('keydown', (e)=>{
+      if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleMenu(); }
+      if(e.key === 'Escape') toggleMenu(false);
+    });
+
+    // Popups handling
+    function openPopup(popupEl, anchorEl){
+      // position popup centered next to anchor's visual center
+      const rect = anchorEl.getBoundingClientRect();
+      const popupRect = popupEl.getBoundingClientRect();
+      // default position — shift slightly towards center of viewport
+      let left = rect.left + rect.width/2 - popupRect.width/2;
+      let top = rect.top + rect.height/2 - popupRect.height/2;
+
+      // ensure popup stays within viewport with padding
+      const pad = 12;
+      left = Math.min(Math.max(left, pad), window.innerWidth - popupRect.width - pad);
+      top = Math.min(Math.max(top, pad), window.innerHeight - popupRect.height - pad);
+
+      popupEl.style.left = left + 'px';
+      popupEl.style.top = top + 'px';
+      popupEl.style.display = 'block';
+      popupEl.setAttribute('aria-hidden','false');
+      // simple focus trap to popup
+      const focusable = popupEl.querySelector('[data-close]') || popupEl;
+      focusable.focus();
+    }
+
+    function closePopup(popupEl){
+      popupEl.style.display = 'none';
+      popupEl.setAttribute('aria-hidden','true');
+    }
+
+    // wire each child button to its popup
+    children.forEach((child, idx)=>{
+      const popup = document.getElementById('popup' + (idx+1));
+      child.addEventListener('click', (ev)=>{
+        ev.stopPropagation();
+        openPopup(popup, child);
+      });
+      child.addEventListener('keydown', (ev)=>{
+        if(ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); openPopup(popup, child); }
+      });
+    });
+
+    // close buttons
+    document.querySelectorAll('[data-close]').forEach(btn=>{
+      btn.addEventListener('click', (e)=>{
+        const popup = btn.closest('.popup');
+        closePopup(popup);
+      });
+    });
+
+    // close popup on escape
+    document.addEventListener('keydown', (e)=>{
+      if(e.key === 'Escape'){
+        document.querySelectorAll('.popup').forEach(p=>{ if(p.style.display === 'block') closePopup(p); });
+      }
+    });
+
+    // make sure popups recalc position on resize
+    window.addEventListener('resize', ()=>{
+      document.querySelectorAll('.popup').forEach(p=>{
+        if(p.style.display === 'block'){
+          // reposition relative to the first child that opened it (simple approach)
+          const id = p.id.replace('popup','');
+          const anchor = document.getElementById('btn' + id);
+          if(anchor) openPopup(p, anchor);
+        }
+      });
+    });
+
+    // optional: start closed
+    toggleMenu(false);
+  </script>
+				  </div>
   <style>
 
 
